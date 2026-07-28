@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends 
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
