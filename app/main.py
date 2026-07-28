@@ -1,14 +1,17 @@
-
-from fastapi import FastAPI, Depends 
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from pydantic import BaseModel
 from datetime import datetime
-import random, os
+import os
 from typing import Optional
 
 DATABASE_URL = os.getenv("DATABASE_URL","sqlite:///./ccios_v9_core.db")
+# Fix postgres URL for SQLAlchemy
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread":False} if "sqlite" in DATABASE_URL else {})
 SessionLocal=sessionmaker(bind=engine)
 Base=declarative_base()
@@ -90,19 +93,34 @@ app=FastAPI(title="CCIOS V9 FINAL CORE - LOVED VERSION", version="9.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
 
 @app.get("/")
-def root(): return {"system":"CCIOS V9 FINAL CORE - LOVED","today":"32 orders, 8 OOS, 15 reviews waiting","visual_commerce":"NO COMPETITOR LIVE","docs":"/docs"}
+def root(): 
+    return {"system":"CCIOS V9 FINAL CORE - LOVED","today":"32 orders, 8 OOS, 15 reviews waiting","visual_commerce":"NO COMPETITOR LIVE","docs":"/docs", "status":"LIVE ✅"}
 
 @app.get("/brands")
 def gb(db: Session=Depends(get_db)): return db.query(Brand).all()
+
 @app.post("/brands")
 def cb(d: BrandIn, db: Session=Depends(get_db)):
     b=Brand(**d.model_dump()); db.add(b); db.commit(); db.refresh(b); return b
+
 @app.get("/products")
 def gp(db: Session=Depends(get_db)): return db.query(Product).all()
+
 @app.get("/orders")
 def go(db: Session=Depends(get_db)): return db.query(Order).all()
+
 @app.get("/reviews")
 def gr(db: Session=Depends(get_db)): return db.query(Review).all()
+
+# FIXED BUG 1: brand_id param mismatch
+@app.get("/today/{brand_id}")
+def today(brand_id: int): 
+    return {"brand_id": brand_id, "orders_new":32,"oos":8,"reviews_pending":15,"campaigns_ending":5,"publish_failed":3,"yesterday_rm":12540,"growth":"+18%","nova":"Restock RAV Bifold Wallet MB-001 Sales +42% 3 days left"}
+
+# FIXED BUG 2: brand_id param mismatch
+@app.get("/visual/{brand_id}")
+def visual(brand_id: int): 
+    return {"brand_id": brand_id, "homepage_score":89,"before_ctr":"1.2%","after_ctr":"3.8%","before_res":"800x400 low res","after_res":"1920x600 high-res lifestyle","category_recommend":"kasut kulit 22k -> beg 18k -> dompet 12k","layout_rules":"Premium minimal white space editorial photography luxury typography no cheap yellow"}
 
 @app.post("/intelligence/analyze/{brand_id}")
 def analyze(brand_id: int, db: Session=Depends(get_db)):
@@ -117,6 +135,7 @@ def analyze(brand_id: int, db: Session=Depends(get_db)):
 
 @app.get("/intelligence/health/{brand_id}")
 def gh(brand_id: int, db: Session=Depends(get_db)): return db.query(Health).filter(Health.brand_id==brand_id).all()
+
 @app.get("/intelligence/action-centre/{brand_id}")
 def ac(brand_id: int, db: Session=Depends(get_db)):
     all_i=db.query(Issue).filter(Issue.brand_id==brand_id).all()
@@ -125,12 +144,6 @@ def ac(brand_id: int, db: Session=Depends(get_db)):
 @app.post("/intelligence/consultant")
 def consultant(q: dict):
     return {"answer":"Overall 94/100 healthy. Today: 32 orders new, 8 OOS, 15 reviews pending. Top action: Fix hero banner CTR 1.2->3.8% + Restock RAV001. Can AI do? Yes 1-click. Impact RM8,200/mo."}
-
-@app.get("/today/{brand_id}")
-def today(bid: int): return {"orders_new":32,"oos":8,"reviews_pending":15,"campaigns_ending":5,"publish_failed":3,"yesterday_rm":12540,"growth":"+18%","nova":"Restock RAV Bifold Wallet MB-001 Sales +42% 3 days left"}
-
-@app.get("/visual/{brand_id}")
-def visual(bid: int): return {"homepage_score":89,"before_ctr":"1.2%","after_ctr":"3.8%","before_res":"800x400 low res","after_res":"1920x600 high-res lifestyle","category_recommend":"kasut kulit 22k -> beg 18k -> dompet 12k","layout_rules":"Premium minimal white space editorial photography luxury typography no cheap yellow"}
 
 @app.post("/seed")
 def seed(db: Session=Depends(get_db)):
